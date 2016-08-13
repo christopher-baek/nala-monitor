@@ -7,7 +7,7 @@
 {{#if model}}
     <ul>
         {{#each model as |recording|}}
-            <li>{{recording}}</li>
+            <li>{{recorded-audio recording=recording}}</li>
         {{/each}}
     </ul>
 {{else}}
