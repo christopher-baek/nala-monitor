@@ -13,7 +13,24 @@ export default Ember.Controller.extend({
             this.set('status', 'listening');
         },
         stopListening() {
-            this.get('audioService').stopListening();
+            let audioService = this.get('audioService');
+            let store = this.get('store');
+
+            let date = new Date();
+
+            audioService.stopListening().then((wavBlob) => {
+                let contentsUrl = (window.URL || window.webkitURL).createObjectURL(wavBlob);
+
+                let recording = store.createRecord('recording', {
+                    dateRecorded: date,
+                    contentsUrl: contentsUrl
+                });
+                recording.save();
+            }).catch((error) => {
+                // TODO: improve this
+                alert('Received the following error while stopping audio service: '+ error);
+            });
+
             this.set('status', 'stopped');
         }
     }
