@@ -3,3 +3,13 @@
     <button {{action 'startListening'}}>Start Listening</button>
     <button {{action 'stopListening'}}>Stop Listening</button>
 </div>
+<h3>Recordings</h3>
+{{#if model}}
+    <ul>
+        {{#each model as |recording|}}
+            <li>{{recording}}</li>
+        {{/each}}
+    </ul>
+{{else}}
+<p>You don't have any recordings yet!</p>
+{{/if}}
