@@ -1,6 +1,8 @@
 /*jshint node:true*/
 /* global require, module */
 var EmberApp = require('ember-cli/lib/broccoli/ember-app');
+var pickFiles = require('broccoli-static-compiler');
+var uglifyJavaScript = require('broccoli-uglify-js');
 
 module.exports = function(defaults) {
   var app = new EmberApp(defaults, {
@@ -20,5 +22,18 @@ module.exports = function(defaults) {
   // please specify an object with the list of modules as keys
   // along with the exports of each module as its value.
 
-  return app.toTree();
+  var workers = pickFiles('workers', {
+    srcDir: '/',
+    files: ['*.js'],
+    destDir: '/assets/workers'
+  });
+
+  if (process.env.EMBER_ENV === 'production') {
+    workers = uglifyJavaScript(workers, {
+      mangle: true,
+      compress: true
+    });
+  }
+
+  return app.toTree(workers);
 };
