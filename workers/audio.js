@@ -41,8 +41,6 @@
         sampleBufferRight.push(inputBufferRight);
 
         sampleLength += inputBufferLeft.length;
-
-        console.log('Recorded ' + sampleLength + ' bytes');
     }
 
     function exportWav() {

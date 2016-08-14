@@ -8,6 +8,10 @@ const CHANNEL_COUNT = 2;
 export default Ember.Service.extend({
     started: false,
     listening: false,
+    active: false,
+    volume: 0,
+    // TODO: make the threshold controllable by user input
+    threshold: 10,
     init() {
         let self = this;
 
@@ -55,11 +59,17 @@ export default Ember.Service.extend({
         } else {
             let audioContext = this.get('audioContext');
             let audioWorker = this.get('audioWorker');
+            let self = this;
 
             navigator.getUserMedia({audio: true},
                 (stream) => {
                     // get the input source
                     let source = audioContext.createMediaStreamSource(stream);
+
+                    // set up an analyser
+                    let analyser = audioContext.createAnalyser();
+                    analyser.smoothingTimeConstant = 0.3;
+                    analyser.fftSize = 1024;
 
                     // set up a procsesor to process audio
                     let scriptProcessor = audioContext.createScriptProcessor(BUFFER_LENGTH, CHANNEL_COUNT, CHANNEL_COUNT);
@@ -67,13 +77,28 @@ export default Ember.Service.extend({
                         let inputBufferLeft = audioProcessingEvent.inputBuffer.getChannelData(0);
                         let inputBufferRight = audioProcessingEvent.inputBuffer.getChannelData(1);
 
+                        // send for recording
                         audioWorker.postMessage({
                             command: 'record',
                             inputBuffers: [inputBufferLeft, inputBufferRight]
                         });
+
+                        // check volume
+                        let frequencyDataLeft = new Uint8Array(analyser.frequencyBinCount);
+                        analyser.getByteFrequencyData(frequencyDataLeft);
+
+                        let averageVolume = self._calculateAverageVolume(frequencyDataLeft);
+                        self.set('volume', averageVolume);
+
+                        if (self.get('active') && averageVolume < self.get('threshold')) {
+                            self.set('active', false);
+                        } else if (!self.get('active') && averageVolume > self.get('threshold')) {
+                            self.set('active', true);
+                        }
                     };
 
                     // connect the nodes
+                    source.connect(analyser);
                     source.connect(scriptProcessor);
                     scriptProcessor.connect(audioContext.destination);
                 },
@@ -88,6 +113,17 @@ export default Ember.Service.extend({
 
         // update the status
         this.set('listening', true);
+    },
+    _calculateAverageVolume(frequencyData) {
+        let sum = 0;
+        let count = frequencyData.length;
+
+        for (let i = 0; i < count; i++) {
+            sum += frequencyData[i];
+        }
+
+        let average = sum/count;
+        return average;
     },
     stopListening() {
         // pause the audo context
