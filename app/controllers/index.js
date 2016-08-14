@@ -3,16 +3,34 @@ import Ember from 'ember';
 export default Ember.Controller.extend({
     audioService: Ember.inject.service('audio'),
     started: Ember.computed('audioService.started', function() {
-        return `${this.get('audioService').get('started')}`;
+        return this.get('audioService').get('started');
     }),
     listening: Ember.computed('audioService.listening', function() {
-        return `${this.get('audioService').get('listening')}`;
+        return this.get('audioService').get('listening');
     }),
     active: Ember.computed('audioService.active', function() {
-        return `${this.get('audioService').get('active')}`;
+        return this.get('audioService').get('active');
     }),
     volume: Ember.computed('audioService.volume', function() {
         return `${this.get('audioService').get('volume')}`;
+    }),
+    activateThreshold: Ember.computed('audioService.activateThreshold', {
+        get(key) {
+            return `${this.get('audioService').get('activateThreshold')}`;
+        },
+        set(key, value) {
+            this.get('audioService').set('activateThreshold', value);
+            return value;
+        }
+    }),
+    silenceTimeout: Ember.computed('audioService.silenceTimeout', {
+        get(key) {
+            return `${this.get('audioService').get('silenceTimeout')}`;
+        },
+        set(key, value) {
+            this.get('audioService').set('silenceTimeout', value);
+            return value;
+        }
     }),
     init() {
         this._super(...arguments);

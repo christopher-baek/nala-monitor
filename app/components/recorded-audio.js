@@ -1,6 +1,7 @@
 import Ember from 'ember';
 
 export default Ember.Component.extend({
+    tagName: 'tr',
     recording: '',
     name: Ember.computed('recording', function() {
         return `${this.get('recording').get('dateRecorded')}`;
