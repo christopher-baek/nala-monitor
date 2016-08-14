@@ -2,8 +2,6 @@ import Ember from 'ember';
 
 export default Ember.Controller.extend({
     audioService: Ember.inject.service('audio'),
-    // TODO: remove this since the service holds the more relevant status
-    status: 'loading',
     started: Ember.computed('audioService.started', function() {
         return `${this.get('audioService').get('started')}`;
     }),
@@ -18,7 +16,6 @@ export default Ember.Controller.extend({
     }),
     init() {
         this._super(...arguments);
-        this.set('status', 'stopped');
     },
     actions: {
         startListening() {
@@ -43,8 +40,6 @@ export default Ember.Controller.extend({
                 // TODO: improve this
                 alert('Received the following error while stopping audio service: '+ error);
             });
-
-            this.set('status', 'stopped');
         }
     }
 });
