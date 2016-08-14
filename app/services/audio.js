@@ -11,6 +11,7 @@ const ANALYZER_FFT_SIZE = 1024;
 
 
 export default Ember.Service.extend({
+    store: Ember.inject.service('store'),
     started: false,
     listening: false,
     recording: false,
@@ -100,10 +101,37 @@ export default Ember.Service.extend({
 
                             // check if the recording should be stopped
                             if (averageVolume < self.get('activateThreshold')) {
-                                let time = new Date().getTime();
+                                let date = new Date();
+                                let time = date.getTime();
+
                                 if (time - self.get('recordingStartTime') > self.get('silenceTimeout')) {
                                     self.set('recording', false);
-                                    // TODO: this should trigger the exportWav function
+
+                                    // export the data
+                                    new Ember.RSVP.Promise(function(resolve, reject) {
+                                        audioWorker.onmessage = function(messageEvent) {
+                                            audioWorker.postMessage({command: 'reset'});
+                                            resolve(messageEvent.data.wavBlob);
+                                        };
+
+                                        // TODO: call the reject handler
+                                    }).then((wavBlob) => {
+                                        // save the recording
+                                        let store = self.get('store');
+
+                                        let contentsUrl = (window.URL || window.webkitURL).createObjectURL(wavBlob);
+
+                                        let recording = store.createRecord('recording', {
+                                            dateRecorded: date,
+                                            contentsUrl: contentsUrl
+                                        });
+                                        recording.save();
+                                    }).catch((error) => {
+                                        // TODO: improve this
+                                        alert('Received the following error while stopping audio service: '+ error);
+                                    });
+
+                                    audioWorker.postMessage({command: 'exportWav'});
                                 }
                             }
                         }
@@ -143,20 +171,5 @@ export default Ember.Service.extend({
 
         // update the status
         this.set('listening', false);
-        
-        let audioWorker = this.get('audioWorker');
-
-        let promise = new Ember.RSVP.Promise(function(resolve, reject) {
-            audioWorker.onmessage = function(messageEvent) {
-                audioWorker.postMessage({command: 'reset'});
-                resolve(messageEvent.data.wavBlob);
-            };
-
-            // TODO: call the reject handler
-        });
-
-        audioWorker.postMessage({command: 'exportWav'});
-
-        return promise;
     }
 });
