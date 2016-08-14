@@ -8,8 +8,8 @@ export default Ember.Controller.extend({
     listening: Ember.computed('audioService.listening', function() {
         return this.get('audioService').get('listening');
     }),
-    active: Ember.computed('audioService.active', function() {
-        return this.get('audioService').get('active');
+    recording: Ember.computed('audioService.recording', function() {
+        return this.get('audioService').get('recording');
     }),
     volume: Ember.computed('audioService.volume', function() {
         return this.get('audioService').get('volume');

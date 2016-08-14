@@ -13,8 +13,8 @@ const ANALYZER_FFT_SIZE = 1024;
 export default Ember.Service.extend({
     started: false,
     listening: false,
-    active: false,
-    activeStartTime: 0,
+    recording: false,
+    recordingStartTime: 0,
     volume: 0,
     activateThreshold: 30,
     silenceTimeout: 5000,
@@ -85,13 +85,13 @@ export default Ember.Service.extend({
                         self.set('volume', averageVolume);
 
                         // if not already recording, check if it should be now
-                        if (!self.get('active') && averageVolume >= self.get('activateThreshold')) {
-                            self.set('active', true);
-                            self.set('activeStartTime', new Date().getTime());
+                        if (!self.get('recording') && averageVolume >= self.get('activateThreshold')) {
+                            self.set('recording', true);
+                            self.set('recordingStartTime', new Date().getTime());
                         }
 
-                        // if active, there is work to do
-                        if (self.get('active')) {
+                        // if recording, there is work to do
+                        if (self.get('recording')) {
                             // send for recording
                             audioWorker.postMessage({
                                 command: 'record',
@@ -101,8 +101,8 @@ export default Ember.Service.extend({
                             // check if the recording should be stopped
                             if (averageVolume < self.get('activateThreshold')) {
                                 let time = new Date().getTime();
-                                if (time - self.get('activeStartTime') > self.get('silenceTimeout')) {
-                                    self.set('active', false);
+                                if (time - self.get('recordingStartTime') > self.get('silenceTimeout')) {
+                                    self.set('recording', false);
                                     // TODO: this should trigger the exportWav function
                                 }
                             }
