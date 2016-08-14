@@ -77,12 +77,6 @@ export default Ember.Service.extend({
                         let inputBufferLeft = audioProcessingEvent.inputBuffer.getChannelData(CHANNEL_INDEX_LEFT);
                         let inputBufferRight = audioProcessingEvent.inputBuffer.getChannelData(CHANNEL_INDEX_RIGHT);
 
-                        // send for recording
-                        audioWorker.postMessage({
-                            command: 'record',
-                            inputBuffers: [inputBufferLeft, inputBufferRight]
-                        });
-
                         // check volume
                         let frequencyDataLeft = new Uint8Array(analyser.frequencyBinCount);
                         analyser.getByteFrequencyData(frequencyDataLeft);
@@ -90,16 +84,28 @@ export default Ember.Service.extend({
                         let averageVolume = self._calculateAverageVolume(frequencyDataLeft);
                         self.set('volume', averageVolume);
 
-                        if (self.get('active') && averageVolume < self.get('activateThreshold')) {
-                            let time = new Date().getTime();
-                            if (time - self.get('activeStartTime') > self.get('silenceTimeout')) {
-                                self.set('active', false);
-                                // TODO: this should trigger the exportWav function
-                            }
-                        } else if (!self.get('active') && averageVolume > self.get('activateThreshold')) {
+                        // if not already recording, check if it should be now
+                        if (!self.get('active') && averageVolume >= self.get('activateThreshold')) {
                             self.set('active', true);
                             self.set('activeStartTime', new Date().getTime());
-                            // TODO: this should trigger the start recording function
+                        }
+
+                        // if active, there is work to do
+                        if (self.get('active')) {
+                            // send for recording
+                            audioWorker.postMessage({
+                                command: 'record',
+                                inputBuffers: [inputBufferLeft, inputBufferRight]
+                            });
+
+                            // check if the recording should be stopped
+                            if (averageVolume < self.get('activateThreshold')) {
+                                let time = new Date().getTime();
+                                if (time - self.get('activeStartTime') > self.get('silenceTimeout')) {
+                                    self.set('active', false);
+                                    // TODO: this should trigger the exportWav function
+                                }
+                            }
                         }
                     };
 
