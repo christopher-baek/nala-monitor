@@ -9,9 +9,10 @@ export default Ember.Service.extend({
     started: false,
     listening: false,
     active: false,
+    activeStartTime: 0,
     volume: 0,
     // TODO: make the threshold controllable by user input
-    threshold: 10,
+    threshold: 60,
     init() {
         let self = this;
 
@@ -91,9 +92,16 @@ export default Ember.Service.extend({
                         self.set('volume', averageVolume);
 
                         if (self.get('active') && averageVolume < self.get('threshold')) {
-                            self.set('active', false);
+                            let time = new Date().getTime();
+                            // TODO: make this trigger threshold configurable by user
+                            if (time - self.get('activeStartTime') > 5000) {
+                                self.set('active', false);
+                                // TODO: this should trigger the exportWav function
+                            }
                         } else if (!self.get('active') && averageVolume > self.get('threshold')) {
                             self.set('active', true);
+                            self.set('activeStartTime', new Date().getTime());
+                            // TODO: this should trigger the start recording function
                         }
                     };
 
