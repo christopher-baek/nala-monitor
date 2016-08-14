@@ -15,6 +15,7 @@ export default Ember.Service.extend({
     started: false,
     listening: false,
     recording: false,
+    playing: false,
     recordingStart: undefined,
     volume: 0,
     activateThreshold: 30,
@@ -65,7 +66,7 @@ export default Ember.Service.extend({
             navigator.getUserMedia({audio: true},
                 (stream) => {
                     // get the input source
-                    let source = audioContext.createMediaStreamSource(stream);
+                    let inputSource = audioContext.createMediaStreamSource(stream);
 
                     // set up an analyser
                     let analyser = audioContext.createAnalyser();
@@ -111,11 +112,12 @@ export default Ember.Service.extend({
                                 }
                             }
                         }
+                        self.set('scriptProcessor', scriptProcessor);
                     };
 
                     // connect the nodes
-                    source.connect(analyser);
-                    source.connect(scriptProcessor);
+                    inputSource.connect(analyser);
+                    inputSource.connect(scriptProcessor);
                     scriptProcessor.connect(audioContext.destination);
                 },
                 (error) => {
@@ -142,7 +144,6 @@ export default Ember.Service.extend({
         return average;
     },
     _saveRecording() {
-        let audioContext = this.get('audioContext');
         let audioWorker = this.get('audioWorker');
         let recordingStart = this.get('recordingStart');
         let self = this;
@@ -168,7 +169,7 @@ export default Ember.Service.extend({
             recording.save();
         }).catch((error) => {
             // TODO: improve this
-            alert('Received the following error while stopping audio service: '+ error);
+            alert('Received the following error while stopping audio service: ' + error);
         });
 
         audioWorker.postMessage({command: 'exportWav'});
@@ -183,5 +184,76 @@ export default Ember.Service.extend({
 
         // export the last recording
         this._saveRecording();
+    },
+    playRecording(contentsUrl) {
+        this.set('playing', true);
+
+        // disconnect the script processor to destination is available
+        let audioContext = this.get('audioContext');
+        let scriptProcessor = this.get('scriptProcessor');
+        scriptProcessor.disconnect(audioContext.destination);
+
+        // load the contents url
+        new Ember.RSVP.Promise(function(resolve, reject) {
+            let request = new XMLHttpRequest();
+            request.open('GET', contentsUrl, true);
+            request.responseType = 'arraybuffer';
+            request.onload = function() {
+                resolve(this.response);
+                // TODO: call the reject handler
+            };
+
+            console.log('loading contents to play');
+            request.send();
+        }).then((response) => {
+            new Ember.RSVP.Promise(function(resolve, reject) {
+                audioContext.decodeAudioData(response, function(buffer) {
+                    resolve(buffer);
+                    // TODO: call the reject handler
+                });
+            }).then((buffer) => {
+                new Ember.RSVP.Promise(function(resolve, reject) {
+                    let bufferSource = audioContext.createBufferSource();
+                    bufferSource.buffer = buffer;
+                    bufferSource.connect(audioContext.destination);
+                    bufferSource.onended = function() {
+                        resolve();
+                    };
+
+                    console.log('playing contents');
+                    audioContext.resume();
+                    bufferSource.start();
+                    // TODO: call the reject handler
+                }).then(() => {
+                    // reconnect the script processor to the destination
+                    console.log('playing complete');
+                    audioContext.suspend();
+                    scriptProcessor.connect(audioContext.destination);
+                    this.set('playing', false);
+                }).catch((error) => {
+                    // TODO: improve this
+                    alert('Received the following error after playing audio contents: ' + error);
+
+                    // reconnect the script processor to the destination
+                    audioContext.suspend();
+                    scriptProcessor.connect(audioContext.destination);
+                    this.set('playing', false);
+                });
+            }).catch((error) => {
+                // TODO: improve this
+                alert('Received the following error while loading audio contents: ' + error);
+
+                // reconnect the script processor to the destination
+                scriptProcessor.connect(audioContext.destination);
+                this.set('playing', false);
+            });
+        }).catch((error) => {
+            // TODO: improve this
+            alert('Received the following error while retrieving audio contents: ' + error);
+
+            // reconnect the script processor to the destination
+            scriptProcessor.connect(audioContext.destination);
+            this.set('playing', false);
+        });
     }
 });

@@ -9,11 +9,14 @@ export default Ember.Component.extend({
     filename: Ember.computed('name', function() {
         return `${this.get('name')}.wav`;
     }),
-    url: Ember.computed('recording', function() {
+    contentsUrl: Ember.computed('recording', function() {
         return this.get('recording').get('contentsUrl');
     }),
     actions: {
-        delete() {
+        play() {
+            this.get('playAction')(this.get('contentsUrl'));
+        },
+        destroy() {
             this.get('recording').destroyRecord();
         }
     }

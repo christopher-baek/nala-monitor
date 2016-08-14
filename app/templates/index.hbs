@@ -16,8 +16,9 @@
     <div class="col s3">
         <div class="section">
             <p>Started <span class="badge white-text darken-4 {{if started 'green' 'red'}}">{{started}}</span></p>
-            <p>Listening <span class="badge white-text darken-4 {{if started 'green' 'red'}}">{{listening}}</span></p>
-            <p>Recording <span class="badge white-text darken-4 {{if started 'green' 'red'}}">{{recording}}</span></p>
+            <p>Listening <span class="badge white-text darken-4 {{if listening 'green' 'red'}}">{{listening}}</span></p>
+            <p>Recording <span class="badge white-text darken-4 {{if recording 'green' 'red'}}">{{recording}}</span></p>
+            <p>Playing <span class="badge white-text darken-4 {{if playing 'green' 'red'}}">{{playing}}</span></p>
             <p>Volume <span class="badge">{{volume}}</span></p>
         </div>
     </div>
@@ -37,7 +38,7 @@
                 </thead>
                 <tbody>
                     {{#each model as |recording|}}
-                        {{recorded-audio recording=recording}}
+                        {{recorded-audio recording=recording playAction=(action 'playRecording')}}
                     {{/each}}
                 </tbody>
             </table>
