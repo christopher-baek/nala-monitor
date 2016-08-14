@@ -15,7 +15,7 @@ export default Ember.Service.extend({
     started: false,
     listening: false,
     recording: false,
-    recordingStartTime: 0,
+    recordingStart: undefined,
     volume: 0,
     activateThreshold: 30,
     silenceTimeout: 5000,
@@ -88,7 +88,7 @@ export default Ember.Service.extend({
                         // if not already recording, check if it should be now
                         if (!self.get('recording') && averageVolume >= self.get('activateThreshold')) {
                             self.set('recording', true);
-                            self.set('recordingStartTime', new Date().getTime());
+                            self.set('recordingStart', new Date());
                         }
 
                         // if recording, there is work to do
@@ -101,37 +101,13 @@ export default Ember.Service.extend({
 
                             // check if the recording should be stopped
                             if (averageVolume < self.get('activateThreshold')) {
-                                let date = new Date();
-                                let time = date.getTime();
+                                let recordingStart = self.get('recordingStart');
+                                let now = new Date().getTime();
 
-                                if (time - self.get('recordingStartTime') > self.get('silenceTimeout')) {
+                                if (now - recordingStart.getTime() > self.get('silenceTimeout')) {
                                     self.set('recording', false);
 
-                                    // export the data
-                                    new Ember.RSVP.Promise(function(resolve, reject) {
-                                        audioWorker.onmessage = function(messageEvent) {
-                                            audioWorker.postMessage({command: 'reset'});
-                                            resolve(messageEvent.data.wavBlob);
-                                        };
-
-                                        // TODO: call the reject handler
-                                    }).then((wavBlob) => {
-                                        // save the recording
-                                        let store = self.get('store');
-
-                                        let contentsUrl = (window.URL || window.webkitURL).createObjectURL(wavBlob);
-
-                                        let recording = store.createRecord('recording', {
-                                            dateRecorded: date,
-                                            contentsUrl: contentsUrl
-                                        });
-                                        recording.save();
-                                    }).catch((error) => {
-                                        // TODO: improve this
-                                        alert('Received the following error while stopping audio service: '+ error);
-                                    });
-
-                                    audioWorker.postMessage({command: 'exportWav'});
+                                    self._saveRecording();
                                 }
                             }
                         }
@@ -165,11 +141,47 @@ export default Ember.Service.extend({
         let average = sum/count;
         return average;
     },
+    _saveRecording() {
+        let audioContext = this.get('audioContext');
+        let audioWorker = this.get('audioWorker');
+        let recordingStart = this.get('recordingStart');
+        let self = this;
+
+        // export the data
+        new Ember.RSVP.Promise(function(resolve, reject) {
+            audioWorker.onmessage = function(messageEvent) {
+                audioWorker.postMessage({command: 'reset'});
+                resolve(messageEvent.data.wavBlob);
+            };
+
+            // TODO: call the reject handler
+        }).then((wavBlob) => {
+            // save the recording
+            let store = self.get('store');
+
+            let contentsUrl = (window.URL || window.webkitURL).createObjectURL(wavBlob);
+
+            let recording = store.createRecord('recording', {
+                dateRecorded: recordingStart,
+                contentsUrl: contentsUrl
+            });
+            recording.save();
+        }).catch((error) => {
+            // TODO: improve this
+            alert('Received the following error while stopping audio service: '+ error);
+        });
+
+        audioWorker.postMessage({command: 'exportWav'});
+    },
     stopListening() {
         // pause the audo context
         this.get('audioContext').suspend();
 
         // update the status
         this.set('listening', false);
+        this.set('recording', false);
+
+        // export the last recording
+        this._saveRecording();
     }
 });
