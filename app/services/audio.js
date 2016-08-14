@@ -3,6 +3,11 @@ import Ember from 'ember';
 
 const BUFFER_LENGTH = 4096;
 const CHANNEL_COUNT = 2;
+const CHANNEL_INDEX_LEFT = 0;
+const CHANNEL_INDEX_RIGHT = 1;
+
+const ANALYZER_SMOOTHING_TIME_CONSTANT = 0.3;
+const ANALYZER_FFT_SIZE = 1024;
 
 
 export default Ember.Service.extend({
@@ -11,8 +16,8 @@ export default Ember.Service.extend({
     active: false,
     activeStartTime: 0,
     volume: 0,
-    // TODO: make the threshold controllable by user input
-    threshold: 60,
+    activateThreshold: 30,
+    silenceTimeout: 5000,
     init() {
         let self = this;
 
@@ -47,12 +52,6 @@ export default Ember.Service.extend({
         return new AudioContext();
     },
     startListening() {
-        if (this.get('listening')) {
-            // if already listening, must already be started also
-            // nothing to do
-            return;
-        }
-
         if (this.get('started')) {
             // if this has aleady been started but is not listening,
             // the audio context must be resumed
@@ -69,14 +68,14 @@ export default Ember.Service.extend({
 
                     // set up an analyser
                     let analyser = audioContext.createAnalyser();
-                    analyser.smoothingTimeConstant = 0.3;
-                    analyser.fftSize = 1024;
+                    analyser.smoothingTimeConstant = ANALYZER_SMOOTHING_TIME_CONSTANT;
+                    analyser.fftSize = ANALYZER_FFT_SIZE;
 
                     // set up a procsesor to process audio
                     let scriptProcessor = audioContext.createScriptProcessor(BUFFER_LENGTH, CHANNEL_COUNT, CHANNEL_COUNT);
                     scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
-                        let inputBufferLeft = audioProcessingEvent.inputBuffer.getChannelData(0);
-                        let inputBufferRight = audioProcessingEvent.inputBuffer.getChannelData(1);
+                        let inputBufferLeft = audioProcessingEvent.inputBuffer.getChannelData(CHANNEL_INDEX_LEFT);
+                        let inputBufferRight = audioProcessingEvent.inputBuffer.getChannelData(CHANNEL_INDEX_RIGHT);
 
                         // send for recording
                         audioWorker.postMessage({
@@ -91,14 +90,13 @@ export default Ember.Service.extend({
                         let averageVolume = self._calculateAverageVolume(frequencyDataLeft);
                         self.set('volume', averageVolume);
 
-                        if (self.get('active') && averageVolume < self.get('threshold')) {
+                        if (self.get('active') && averageVolume < self.get('activateThreshold')) {
                             let time = new Date().getTime();
-                            // TODO: make this trigger threshold configurable by user
-                            if (time - self.get('activeStartTime') > 5000) {
+                            if (time - self.get('activeStartTime') > self.get('silenceTimeout')) {
                                 self.set('active', false);
                                 // TODO: this should trigger the exportWav function
                             }
-                        } else if (!self.get('active') && averageVolume > self.get('threshold')) {
+                        } else if (!self.get('active') && averageVolume > self.get('activateThreshold')) {
                             self.set('active', true);
                             self.set('activeStartTime', new Date().getTime());
                             // TODO: this should trigger the start recording function

@@ -2,6 +2,8 @@
     var MIME_TYPE_WAV = 'audio/wav';
     var CHANNEL_COUNT = 2;
     var BYTES_PER_SAMPLE = 2;
+    var CHANNEL_INDEX_LEFT = 0;
+    var CHANNEL_INDEX_RIGHT = 1;
 
     var sampleBufferLeft = [];
     var sampleBufferRight = [];
@@ -34,8 +36,8 @@
     }
 
     function record(inputBuffers) {
-        var inputBufferLeft = inputBuffers[0];
-        var inputBufferRight = inputBuffers[1];
+        var inputBufferLeft = inputBuffers[CHANNEL_INDEX_LEFT];
+        var inputBufferRight = inputBuffers[CHANNEL_INDEX_RIGHT];
 
         sampleBufferLeft.push(inputBufferLeft);
         sampleBufferRight.push(inputBufferRight);

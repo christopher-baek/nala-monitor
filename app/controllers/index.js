@@ -12,11 +12,11 @@ export default Ember.Controller.extend({
         return this.get('audioService').get('active');
     }),
     volume: Ember.computed('audioService.volume', function() {
-        return `${this.get('audioService').get('volume')}`;
+        return this.get('audioService').get('volume');
     }),
     activateThreshold: Ember.computed('audioService.activateThreshold', {
         get(key) {
-            return `${this.get('audioService').get('activateThreshold')}`;
+            return this.get('audioService').get('activateThreshold');
         },
         set(key, value) {
             this.get('audioService').set('activateThreshold', value);
@@ -25,10 +25,10 @@ export default Ember.Controller.extend({
     }),
     silenceTimeout: Ember.computed('audioService.silenceTimeout', {
         get(key) {
-            return `${this.get('audioService').get('silenceTimeout')}`;
+            return this.get('audioService').get('silenceTimeout')/1000;
         },
         set(key, value) {
-            this.get('audioService').set('silenceTimeout', value);
+            this.get('audioService').set('silenceTimeout', value * 1000);
             return value;
         }
     }),
@@ -37,27 +37,30 @@ export default Ember.Controller.extend({
     },
     actions: {
         startListening() {
-            this.get('audioService').startListening();
-            this.set('status', 'listening');
+            if (!this.get('listening')) {
+                this.get('audioService').startListening();
+            }
         },
         stopListening() {
-            let audioService = this.get('audioService');
-            let store = this.get('store');
+            if (this.get('listening')) {
+                let audioService = this.get('audioService');
+                let store = this.get('store');
 
-            let date = new Date();
+                let date = new Date();
 
-            audioService.stopListening().then((wavBlob) => {
-                let contentsUrl = (window.URL || window.webkitURL).createObjectURL(wavBlob);
+                audioService.stopListening().then((wavBlob) => {
+                    let contentsUrl = (window.URL || window.webkitURL).createObjectURL(wavBlob);
 
-                let recording = store.createRecord('recording', {
-                    dateRecorded: date,
-                    contentsUrl: contentsUrl
+                    let recording = store.createRecord('recording', {
+                        dateRecorded: date,
+                        contentsUrl: contentsUrl
+                    });
+                    recording.save();
+                }).catch((error) => {
+                    // TODO: improve this
+                    alert('Received the following error while stopping audio service: '+ error);
                 });
-                recording.save();
-            }).catch((error) => {
-                // TODO: improve this
-                alert('Received the following error while stopping audio service: '+ error);
-            });
+            }
         }
     }
 });
