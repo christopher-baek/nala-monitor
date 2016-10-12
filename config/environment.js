@@ -4,7 +4,7 @@ module.exports = function(environment) {
   var ENV = {
     modulePrefix: 'nala-monitor',
     environment: environment,
-    rootURL: '/',
+    rootURL: '/nala-monitor/',
     locationType: 'auto',
     EmberENV: {
       FEATURES: {
