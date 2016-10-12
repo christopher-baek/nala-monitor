@@ -1,7 +1,7 @@
 {
   "name": "nala-monitor",
-  "version": "0.0.0",
-  "description": "Small description for nala-monitor goes here",
+  "version": "0.0.1",
+  "description": "An application to record if your dog barks while you're out of the apartment",
   "private": true,
   "directories": {
     "doc": "doc",
@@ -12,11 +12,14 @@
     "start": "ember server",
     "test": "ember test"
   },
-  "repository": "",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/christopherbaek/nala-monitor"
+  },
   "engines": {
     "node": ">= 0.10.0"
   },
-  "author": "",
+  "author": "Christopher Baek",
   "license": "MIT",
   "devDependencies": {
     "broccoli-asset-rev": "^2.4.2",
